@@ -5,15 +5,15 @@ ___
 ![GitHub](https://img.shields.io/badge/IDE%20Version-Delphi%2010.3/11/12-ffffba)
 [![GetIt – Available](https://img.shields.io/badge/GetIt-Available-baffc9?logo=delphi&logoColor=white)](https://getitnow.embarcadero.com/genai-optimized-openai-integration-wrapper/)
 ![GitHub](https://img.shields.io/badge/platform-all%20platforms-baffc9)
-![GitHub](https://img.shields.io/badge/Updated%20on%20june%2019,%202025-blue)
+![GitHub](https://img.shields.io/badge/Updated%20on%20November%2026,%202025-blue)
 
 <br/>
 
 NEW: 
-- Getit current version: 1.0.3
+- GetIt current version: 1.0.3
 - [Changelog](https://github.com/MaxiDonkey/DelphiDeepseek/blob/main/Changelog.md)
-- [Multiple queries with chaining](#multiple-queries-with-chaining)
-- [Tips and tricks](#tips-and-tricks)
+- [Local model support via LM Studio (OpenAI-compatible server)](#run-models-locally-with-lm-studio)
+
 ___
 
 - [Introduction](#introduction)
@@ -23,6 +23,7 @@ ___
     - [Simplified Unit Declaration](#simplified-unit-declaration) 
 - [Usage](#usage)
     - [Initialization](#initialization)
+    - [Run models locally with LM Studio](#run-models-locally-with-lm-studio)
     - [Deepseek Models Overview](#deepseek-models-overview)
     - [Chats](#chats)
         - [Create a message](#create-a-message)
@@ -127,8 +128,14 @@ Once you have a token, you can initialize `IDeepseek` interface, which is an ent
 >```Pascal
 >uses Deepseek;
 >
->var Deepseek := TDeepseek.CreateInstance(API_KEY);
->var DeepseekBeta := TDeepseekFactory.CreateBetaInstance(API_KEY); 
+>// Cloud clients
+>var Deepseek     := TDeepseekFactory.CreateInstance(API_KEY);
+>var DeepseekBeta := TDeepseekFactory.CreateBetaInstance(API_KEY);
+>
+>// Local client (LM Studio – OpenAI compatible server)
+>var DeepseekLMS  := TDeepseekFactory.CreateLMSInstance;  // default: http://127.0.0.1:1234/v1
+>// or:
+>// var DeepseekLMS := TDeepseekFactory.CreateLMSInstance('http://192.168.1.10:1234');
 >```
 
 The DeepseekBeta client must be used to access APIs that are currently provided in beta version.
@@ -138,11 +145,141 @@ The DeepseekBeta client must be used to access APIs that are currently provided 
 
 <br/>
 
+## Run models locally with LM Studio
+
+### Using non-DeepSeek models in LM Studio
+
+- Download LM Studio: https://lmstudio.ai/
+
+- This section assumes you are already familiar with LM Studio (loading models, starting the local OpenAI server, selecting the port, etc.).
+
+<br>
+
+The LM Studio backend exposes a fully OpenAI-compatible HTTP server.  
+Because the Delphi Deepseek wrapper forwards raw OpenAI-format requests to the server, **you can load and run any model supported by LM Studio**, even if it does not belong to the DeepSeek ecosystem.
+
+Examples of models you can use transparently:
+
+- **openai/gpt-oss-20b** (OpenAI)
+- **mistralai/mistral-7b-instruct-v0.3** (Mistral AI)
+- **NousResearch, Qwen, Falcon, Llama, Gemma**, etc.
+
+All these models work seamlessly with:
+
+- `Chat` (sync, async, streaming, promises)  
+- `FIM` (if the model supports it)  
+- `Parallel prompts`  
+- `Tools / function calling` (if the model supports it)
+
+You simply need to set:
+```pascal
+Params.Model('model-name-as-exposed-by-LM-Studio');
+```
+
+>[!NOTE]
+>LM Studio may rename models when exposing them via the OpenAI server.
+>Use the LM Studio UI → OpenAI Server panel to check the exact model identifier.
+
+<br>
+
+### Embedding models not supported
+
+This wrapper intentionally does not include an Embeddings API, because:
+
+DeepSeek does not provide embedding endpoints in its official REST API.
+
+The LM Studio server exposes embeddings only for models designed for that purpose, but supporting an embeddings client API here would create an inconsistent mismatch between the remote and the local DeepSeek feature set.
+
+Therefore:
+
+- **Local embeddings via LM Studio = NOT supported.**
+- **Cloud embeddings via Deepseek = NOT available.**
+
+This guarantees that the wrapper remains a strict, coherent implementation of DeepSeek’s documented API surface, while still allowing LM Studio for local LLM inference.
+
+<br>
+
+### Local chat example (non-streaming)
+ 
+```pascal
+  TutorialHub.Clear;
+  DeepseekLMS.ClientHttp.ResponseTimeout := 120000;
+
+  //Asynchronous promise example
+  Start(TutorialHub);
+  var Promise := DeepseekLMS.Chat.AsyncAwaitCreate(
+    procedure (Params: TChatParams)
+    begin
+      Params.Model('deepseek/deepseek-r1-0528-qwen3-8b');
+      Params.Messages([
+        FromUser('What is the capital of France, and then the capital of champagne?')
+      ]);
+      TutorialHub.JSONRequest := Params.ToFormat();
+    end);
+
+  Promise
+    .&Then<TChat>(
+      function (Value: TChat): TChat
+      begin
+        Result := Value;
+        Display(TutorialHub, Value);
+      end)
+    .&Catch(
+      procedure (E: Exception)
+      begin
+        Display(TutorialHub, E.Message);
+      end);
+```
+
+<br>
+
+### Local streaming example
+
+```pascal
+  TutorialHub.Clear;
+
+  //Asynchronous promise example
+  var Promise := DeepseekLMS.Chat.AsyncAwaitCreateStream(
+    procedure (Params: TChatParams)
+    begin
+      Params.Model('deepseek/deepseek-r1-0528-qwen3-8b');
+      Params.Messages([
+        FromUser('Does art belong to the artist or to his audience?')
+      ]);
+      Params.Stream;
+      TutorialHub.JSONRequest := Params.ToFormat();
+    end,
+    function : TPromiseChatStream
+    begin
+      Result.Sender := TutorialHub;
+      Result.OnProgress :=
+        procedure (Sender: TObject; Chunk: TChat)
+        begin
+          DisplayStream(Sender, Chunk);
+        end;
+    end);
+
+  promise
+    .&Then<TPromiseBuffer>(
+      function (Value: TPromiseBuffer): TPromiseBuffer
+      begin
+        Result := Value;
+        ShowMessage(Value.Content);
+      end)
+    .&Catch(
+      procedure (E: Exception)
+      begin
+        Display(TutorialHub, E.Message);
+      end);
+```
+
+<br>
+
 ## Deepseek Models Overview
 
 Two models are currently available:
 - [deepseek-chat](https://huggingface.co/deepseek-ai/deepseek-llm-67b-chat) 
-- [deepseek-coder](https://deepseekcoder.github.io/). et sur [HuggingFace](https://huggingface.co/deepseek-ai) 
+- [deepseek-coder](https://deepseekcoder.github.io/). also available on [HuggingFace](https://huggingface.co/deepseek-ai) 
 
 Regarding the APIs, only version 3 appears to be available, although the documentation lacks clarity on this point.
 

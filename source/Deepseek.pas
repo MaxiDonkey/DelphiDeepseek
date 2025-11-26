@@ -15,7 +15,7 @@ uses
   Deepseek.HttpClient.Intf, Deepseek.HttpClient, Deepseek.Monitoring, Deepseek.API.Parallel;
 
 const
-  VERSION = 'Deepseekv1.0.3';
+  VERSION = 'Deepseekv1.0.4';
 
 type
   /// <summary>
@@ -54,6 +54,7 @@ type
     /// A string representing the library version.
     /// </returns>
     property Version: string read GetVersion;
+
     /// <summary>
     /// This class offers functionality for generating contextually appropriate responses within
     /// conversational frameworks.
@@ -104,7 +105,7 @@ type
 
     /// <summary>
     /// Sets or retrieves the base URL for API requests.
-    /// Default is https://api.Deepseek.com/v1
+    /// Default is https://api.deepseek.com
     /// </summary>
     property BaseURL: string read GetBaseUrl write SetBaseUrl;
 
@@ -165,6 +166,27 @@ type
     /// WARNING : Please take care to adjust the SCOPE of the <c>DeepseekCloud</c> interface in you application.
     /// </remarks>
     class function CreateBetaInstance(const AToken: string): IDeepseek;
+
+    /// <summary>
+    /// Creates an <see cref="IDeepseek"/> instance configured to run models locally
+    /// through an LM Studio server.
+    /// </summary>
+    /// <param name="URLBase">
+    /// Optional base URL of the LM Studio server (for example, "http://127.0.0.1:1234").
+    /// If this parameter is empty, the default LM Studio server URL is used.
+    /// Do not append the "/v1" path segment; it is added automatically by the library.
+    /// </param>
+    /// <returns>
+    /// An <see cref="IDeepseek"/> instance whose requests are routed to the configured
+    /// LM Studio server instead of the remote Deepseek API.
+    /// </returns>
+    /// <remarks>
+    /// Use this factory method when you want to execute models locally via LM Studio
+    /// rather than calling the hosted Deepseek endpoints.
+    /// Before using the returned instance, make sure that the LM Studio server is
+    /// running and that its status is shown as <c>Running</c> in the LM Studio UI.
+    /// </remarks>
+    class function CreateLMSInstance(const URLBase: string = ''): IDeepseek;
   end;
 
   /// <summary>
@@ -247,12 +269,6 @@ type
     /// <returns>
     /// An instance of TDeepseekAPI for making API calls.
     /// </returns>
-    /// <summary>
-    /// the main API object used for making requests.
-    /// </summary>
-    /// <returns>
-    /// An instance of TDeepseekAPI for making API calls.
-    /// </returns>
     property API: TDeepseekAPI read GetAPI;
 
     /// <summary>
@@ -268,7 +284,7 @@ type
 
     /// <summary>
     /// Sets or retrieves the base URL for API requests.
-    /// Default is https://api.stability.ai
+    /// Default is https://api.deepseek.com
     /// </summary>
     /// <param name="Value">
     /// The base URL as a string.
@@ -290,7 +306,7 @@ type
     /// This constructor is typically used when no API token is provided initially.
     /// The token can be set later via the <see cref="Token"/> property.
     /// </remarks>
-    constructor Create; overload;
+    constructor Create(const LocalLMS: Boolean = False); overload;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TDeepseek"/> class with the provided API token and optional header configuration.
@@ -305,7 +321,7 @@ type
     /// <remarks>
     /// This constructor allows the user to specify an API token at the time of initialization.
     /// </remarks>
-    constructor Create(const AToken: string); overload;
+    constructor Create(const AToken: string; const LocalLMS: Boolean = False); overload;
 
     /// <summary>
     /// Releases all resources used by the current instance of the <see cref="TDeepseek"/> class.
@@ -957,15 +973,15 @@ end;
 
 { TDeepseek }
 
-constructor TDeepseek.Create;
+constructor TDeepseek.Create(const LocalLMS: Boolean);
 begin
   inherited Create;
-  FAPI := TDeepseekAPI.Create;
+  FAPI := TDeepseekAPI.Create(LocalLMS);
 end;
 
-constructor TDeepseek.Create(const AToken: string);
+constructor TDeepseek.Create(const AToken: string; const LocalLMS: Boolean);
 begin
-  Create;
+  Create(LocalLMS);
   Token := AToken;
 end;
 
@@ -1055,6 +1071,19 @@ end;
 class function TDeepseekFactory.CreateInstance(const AToken: string): IDeepseek;
 begin
   Result := TDeepseek.Create(AToken);
+end;
+
+class function TDeepseekFactory.CreateLMSInstance(
+  const URLBase: string): IDeepseek;
+begin
+  if not URLBase.Trim.IsEmpty then
+    begin
+      var Base := URLBase.TrimRight(['/']);
+      if not Base.EndsWith('/v1', True) then
+        Base := Base + '/v1';
+      TDeepseekAPI.LocalUrlBase := Base;
+    end;
+  Result := TDeepseek.Create('', True);
 end;
 
 end.

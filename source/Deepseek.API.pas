@@ -17,10 +17,13 @@ uses
 type
   TDeepseekConfiguration = class
   const
-    URL_BASE = 'https://api.deepseek.com';
+      URL_BASE = 'https://api.deepseek.com';
+  strict private
+    class var FLocalUrlBase: string;
   private
     FAPIKey: string;
     FBaseUrl: string;
+    FLMStudio: Boolean;
     procedure SetAPIKey(const Value: string);
     procedure SetBaseUrl(const Value: string);
   public
@@ -28,6 +31,8 @@ type
     procedure APICheck;
     property APIKey: string read FAPIKey write SetAPIKey;
     property BaseUrl: string read FBaseUrl write SetBaseUrl;
+    property LMStudio: Boolean read FLMStudio write FLMStudio;
+    class property LocalUrlBase: string read FLocalUrlBase write FLocalUrlBase;
   end;
 
   TApiHttpHandler = class(TDeepseekConfiguration)
@@ -62,8 +67,7 @@ type
     function PostForm<TResult: class, constructor; TParams: TMultipartFormData, constructor>(const Path: string; ParamProc: TProc<TParams>;
       var ResponseHeader: TNetHeaders): TResult; overload;
   public
-    constructor Create; overload;
-    constructor Create(const AAPIKey: string); overload;
+    constructor Create(const LocalLMS: Boolean = False); overload;
     class function Parse<T: class, constructor>(const Value: string): T;
   end;
 
@@ -83,18 +87,16 @@ implementation
 uses
   System.StrUtils, REST.Json, System.NetConsts;
 
-constructor TDeepseekAPI.Create;
+constructor TDeepseekAPI.Create(const LocalLMS: Boolean);
 begin
-  inherited;
+  inherited Create;
   FAPIKey := EmptyStr;
-  FBaseUrl := URL_BASE;
+  FLMStudio := LocalLMS;
+  if FLMStudio then
+    FBaseUrl := TDeepseekAPI.LocalUrlBase
+  else
+    FBaseUrl := URL_BASE;
   FClientHttp := THttpClientAPI.CreateInstance(APICheck);
-end;
-
-constructor TDeepseekAPI.Create(const AAPIKey: string);
-begin
-  Create;
-  APIKey := AAPIKey;
 end;
 
 function TDeepseekAPI.Post<TResult, TParams>(const Path: string; ParamProc: TProc<TParams>): TResult;
@@ -292,7 +294,7 @@ begin
     except
       Error := nil;
     end;
-    if Assigned(Error) and Assigned(Error) then
+    if Assigned(Error) then
       RaiseError(Code, Error)
   finally
     if Assigned(Error) then
@@ -339,6 +341,13 @@ end;
 
 procedure TDeepseekConfiguration.APICheck;
 begin
+  if FLMStudio then
+    begin
+      if FBaseUrl.IsEmpty then
+        raise TDeepseekExceptionAPI.Create('Invalid LM Studio base URL.');
+      Exit;
+    end;
+
   if FAPIKey.IsEmpty or FBaseUrl.IsEmpty then
     raise TDeepseekExceptionAPI.Create('Invalid API key or base URL.');
 end;
@@ -389,6 +398,11 @@ end;
 
 function TApiHttpHandler.GetHeaders: TNetHeaders;
 begin
+  if FLMStudio then
+    begin
+      Exit(FCustomHeaders);
+    end;
+
   Result :=
     [TNetHeader.Create('authorization', 'Bearer ' + FAPIKey)] +
     FCustomHeaders;
@@ -399,5 +413,7 @@ begin
   FCustomHeaders := Value;
 end;
 
+initialization
+  TDeepseekAPI.LocalUrlBase := 'http://127.0.0.1:1234/v1';
 end.
 
