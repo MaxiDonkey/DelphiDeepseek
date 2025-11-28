@@ -10,7 +10,7 @@ ___
 <br/>
 
 NEW: 
-- GetIt current version: 1.0.3
+- GetIt current version: 1.0.4
 - [Changelog](https://github.com/MaxiDonkey/DelphiDeepseek/blob/main/Changelog.md)
 - [Local model support via LM Studio (OpenAI-compatible server)](#run-models-locally-with-lm-studio)
 

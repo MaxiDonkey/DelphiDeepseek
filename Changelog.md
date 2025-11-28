@@ -1,4 +1,4 @@
-#### 2025, November 26 version 1.0.4
+### 2025, November 26 version 1.0.4
 - Added optional support for running models locally via ***LM Studio***.
   You can now route all calls through an OpenAI-compatible ***LM Studio*** server by using:
 
@@ -19,7 +19,7 @@ var version := Client.Version;
 
 <br>
 
-#### 2025, April 26 version 1.0.2
+### 2025, April 26 version 1.0.2
 - Http request monitoring.
 - Parallel method for generating text
 - Multiple queries with chaining
