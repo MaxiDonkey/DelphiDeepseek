@@ -5,7 +5,7 @@ ___
 ![GitHub](https://img.shields.io/badge/IDE%20Version-Delphi%2010.3/11/12-ffffba)
 [![GetIt – Available](https://img.shields.io/badge/GetIt-Available-baffc9?logo=delphi&logoColor=white)](https://getitnow.embarcadero.com/genai-optimized-openai-integration-wrapper/)
 ![GitHub](https://img.shields.io/badge/platform-all%20platforms-baffc9)
-![LS Studio supported](https://img.shields.io/badge/LM%20Studio-supported-blue)
+[![LS Studio supported](https://img.shields.io/badge/LM%20Studio-supported-blue)](https://lmstudio.ai/)
 
 <br/>
 
