@@ -5,13 +5,13 @@ ___
 ![GitHub](https://img.shields.io/badge/IDE%20Version-Delphi%2010.3/11/12-ffffba)
 [![GetIt – Available](https://img.shields.io/badge/GetIt-Available-baffc9?logo=delphi&logoColor=white)](https://getitnow.embarcadero.com/genai-optimized-openai-integration-wrapper/)
 ![GitHub](https://img.shields.io/badge/platform-all%20platforms-baffc9)
-![GitHub](https://img.shields.io/badge/Updated%20on%20November%2026,%202025-blue)
+![LS Studio supported](https://img.shields.io/badge/LM%20Studio-supported-blue)
 
 <br/>
 
 NEW: 
 - GetIt current version: 1.0.4
-- [Changelog](https://github.com/MaxiDonkey/DelphiDeepseek/blob/main/Changelog.md)
+- [Changelog](https://github.com/MaxiDonkey/DelphiDeepseek/blob/main/Changelog.md) updated on November 26, 2025
 - [Local model support via LM Studio (OpenAI-compatible server)](#run-models-locally-with-lm-studio)
 
 ___
